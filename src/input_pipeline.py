@@ -60,9 +60,8 @@ def read_and_decode_TFR(filename_queue, image_width, image_height, image_channel
     with tf.name_scope('format_label'):
         # Convert label from a scalar uint8 tensor to an int32 scalar.
         label = tf.cast(features['image/class/label'], tf.int32, name='cast_label')
-        print(label)
         # We make this scalar label a one-hot type!
-        label = tf.one_hot(label, depth=2, name='label_scaler_to_vec')
+        label = tf.one_hot(label, depth=7, name='label_scaler_to_vec')
         # Flatten label to 1D, rather than 2D with 1-row
         label = tf.reshape(label, [-1], name='label_flatten')
 
@@ -88,7 +87,7 @@ def input_pipline(file_names, batch_size, numb_pre_threads, num_epochs = 1, outp
             # Generate the file-name queue from given list of filenames. IMPORTANT, this function can read through
             # strings indefinitely, thus you WANT to give a "num_epochs" parameter, when you reach the limit, the
             # "OutOfRange" error will be thrown.
-            filename_queue = tf.train.string_input_producer(file_names, num_epochs=num_epochs, name='file_name_queue',
+            filename_queue = tf.train.string_input_producer(file_names, num_epochs=num_epochs+1, name='file_name_queue',
                                                             capacity=100)
 
             # Read the image using method defined above, this will actually take the queue and one its files, and read
@@ -104,7 +103,7 @@ def input_pipline(file_names, batch_size, numb_pre_threads, num_epochs = 1, outp
             min_fraction_of_examples_in_queue = .6
             min_queue_examples = int(batch_size * min_fraction_of_examples_in_queue)
             min_after_dequeue = min_queue_examples
-            capacity = min_queue_examples + 10 * batch_size
+            capacity = min_queue_examples + 5 * batch_size
             print("\nInput-pipe,")
             print("  capacity .....", capacity)
             print("  batch_size ...", batch_size)
@@ -143,8 +142,7 @@ if __name__ == '__main__':
                  'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00005-of-00010',
                  'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00006-of-00010',
                  'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00007-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00008-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00009-of-00010']
+                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00008-of-00010']
 
     #
     images, labels = input_pipline(filenames, batch_size=10, numb_pre_threads=1, num_epochs=1, output_type='train',

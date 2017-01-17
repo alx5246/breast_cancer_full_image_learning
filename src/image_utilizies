@@ -1,0 +1,34 @@
+# A.Lons
+# Jan 2017
+#
+# This is for helping me with image data as needed. In particular I am using this to modify the original cal-tech-101
+# image set and squash them into 128X128 images. This is all hardcoded and not readily for reuse.
+
+import os
+import skimage.transform
+import skimage.color
+from skimage import io
+import numpy as np
+
+main_path = 'data_files/png_files/caltech_101_128x128'
+my_list = os.listdir(main_path)
+for folders in my_list:
+    sub_path = os.path.join(main_path, folders)
+    print(sub_path)
+    image_names= os.listdir(sub_path)
+    print(len(image_names))
+    for im_path in image_names:
+        # Read in the image
+        image_name = os.path.join(sub_path, im_path)
+        orig_image = io.imread(image_name)
+        # Now make the image black and white
+        orig_image = skimage.color.rgb2gray(orig_image)
+        # Now change the size of the image!
+        orig_image = skimage.transform.resize(image=orig_image, output_shape=(128, 128))
+        print(np.shape(orig_image))
+        # Now save the image back!
+        print(image_name)
+        io.imsave(image_name, orig_image)
+
+
+

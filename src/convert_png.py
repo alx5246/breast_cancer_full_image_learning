@@ -335,12 +335,12 @@ if __name__ == '__main__':
 
     # This is tell how many threads to use and directoreis to work in. Some of this code is hardcoded.
     NUM_THREADS = 1
+    #OUTPUT_DIRECTOY = 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test'
     OUTPUT_DIRECTOY = 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test'
-    #OUTPUT_DIRECTOY = 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/training'
 
     # Give the data directories
+    #data_dir = 'data_files/png_files/png_set_00/set_16bit_128x128/Test'
     data_dir = 'data_files/png_files/png_set_00/set_16bit_128x128/Test'
-    #data_dir = 'data_files/png_files/png_set_00/set_16bit_128x128/Training'
 
     # Give label text files, these are the folder labels we will be looking for!
     labels_file = 'data_files/png_files/png_set_00/set_16bit_128x128/classes.txt'
