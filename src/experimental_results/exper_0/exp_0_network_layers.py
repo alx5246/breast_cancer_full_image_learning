@@ -217,7 +217,10 @@ def gen_2dconv(input_tensor, conv_shape, strides, bias_shape, keep_prob=.85, bat
 
         conv_op = tf.nn.conv2d(input_tensor, kernel, strides=strides, padding='SAME', name='conv2d_op')
 
-        drop_out = tf.nn.dropout(conv_op, keep_prob=keep_prob, name='drop_out')
+        if is_training:
+            drop_out = tf.nn.dropout(conv_op, keep_prob=keep_prob, name='drop_out')
+        else:
+            drop_out = tf.nn.dropout(conv_op, keep_prob=1.00, name='drop_out')
 
         # Apply (or not apply) batch normalization with trainable parameters
         if batch_norm:

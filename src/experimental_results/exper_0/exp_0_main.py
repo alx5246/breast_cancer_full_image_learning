@@ -18,24 +18,11 @@ import input_pipeline as ip
 import time
 from datetime import datetime
 
-# To handle file movements
-import os.path
 
 
-def worker(i, quit, foundit):
-    print("%d started" % i)
-    while not quit.is_set():
-        x = random.random()
-        if x > 0.95:
-            print('%d found %g' % (i, x))
-            foundit.set()
-            break
-        sleep(0.1)
-    print("%d is done" % i)
 
-
-def training_session(finished_training_event, save_path, train_filenames, n_examples_per_epoch, n_classes, batch_size,
-                     n_epochs, batch_norm, regulizer, keep_prob, learning_rate):
+def training_session(finished_first_epoch_event, finished_training_event, save_path, train_filenames, n_examples_per_epoch,
+                     n_classes, batch_size, n_epochs, batch_norm, regulizer, keep_prob, learning_rate):
     """
     DESCRIPTION
     Where network training occurs.
@@ -53,6 +40,14 @@ def training_session(finished_training_event, save_path, train_filenames, n_exam
     :return:
     """
 
+    # We need to import the os in order to handle files and setting up CUDA correctly
+    import os
+    # Make sure we set the visable CUDA devices
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # To make sure this is actually working
+    from tensorflow.python.client import device_lib
+    print(device_lib.list_local_devices())
+
     # PATH NOTES: we are within the exper_0/ folder, thus everything we save must be relative to that path.
     # Thus if we want to go up one folder we would have to use ../ or two folders ../../
 
@@ -64,7 +59,7 @@ def training_session(finished_training_event, save_path, train_filenames, n_exam
     list_of_dirs = os.listdir(save_path)
     experiment_numb = len(list_of_dirs) + 1
     # Now we make new directories, first by making the path names
-    exp_dir = os.path.join(save_path, '_exper_0_' + str(experiment_numb).zfill(3))
+    exp_dir = os.path.join(save_path, '_exper_0_' + str(experiment_numb).zfill(4))
     train_chk_pt_dir = os.path.join(exp_dir, 'train_chk_pt')
     test_chk_pt_dir = os.path.join(exp_dir, 'test_chk_pt')
     train_smry_dir = os.path.join(exp_dir, 'train_smry_dir')
@@ -78,7 +73,7 @@ def training_session(finished_training_event, save_path, train_filenames, n_exam
     os.makedirs(test_smry_dir)
 
     # Now we also want to include a text file along with all of this, so lets do that now!
-    exp_info_text_path = os.path.join(exp_dir, 'experiment_' + str(experiment_numb).zfill(3) + '_info.txt')
+    exp_info_text_path = os.path.join(exp_dir, 'training_info.txt')
     with open(exp_info_text_path, "w") as info_text_file:
         # Lets fill in some important information in here!
         info_text_file.write('A.Lons & S.Picard')
@@ -93,6 +88,8 @@ def training_session(finished_training_event, save_path, train_filenames, n_exam
         info_text_file.write('\nRegularization Beta: ' + str(regulizer))
         info_text_file.write('\nLearning rate: ' + str(learning_rate))
         info_text_file.write('\n\nThe filenames of the data used here during training are ... ')
+        for file_name in train_filenames:
+            info_text_file.write("\n" + file_name)
 
     print("\n\nSTARTED TRAINING...")
 
@@ -181,6 +178,11 @@ def training_session(finished_training_event, save_path, train_filenames, n_exam
 
             for epoch_iteration in range(n_epochs):
 
+                # Some multiprocessing things, we want to set this event to true after we finish the first training
+                # epoch so we can start calling the evaluation
+                if epoch_iteration == 1:
+                    finished_first_epoch_event.set()
+
                 # Track time for batches, and increment global_step
                 run_batch_times = []
                 sess.run(increment_global_step_op)
@@ -224,26 +226,208 @@ def training_session(finished_training_event, save_path, train_filenames, n_exam
     finished_training_event.set()
 
 
+def evaluation_session(finished_training_event, save_path, test_filenames, n_examples_per_epoch, n_classes, batch_size,
+                       n_epochs, batch_norm, regulizer, keep_prob, learning_rate):
+
+    # We need to import the os in order to handle files and setting up CUDA correctly
+    import os
+    # Make sure we set the visable CUDA devices
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    # To make sure this is actually working
+    from tensorflow.python.client import device_lib
+    print(device_lib.list_local_devices())
+
+    # The first step is going to be to find the directory where we are saving the training data, it should be the
+    # directory with the largest number! We will find this one by looping over
+    list_of_dirs = os.listdir(save_path)
+    val = -1
+    ind = 0
+    for zx, dir_name in enumerate(list_of_dirs):
+        last_chars = dir_name[-4:]
+        if last_chars.isdigit():
+            if val < int(last_chars):
+                ind = zx
+                val = int(last_chars)
+    # Now we know the path name!
+    exp_dir = os.path.join(save_path, list_of_dirs[ind])
+    train_chk_pt_dir = os.path.join(exp_dir, 'train_chk_pt')
+    test_chk_pt_dir = os.path.join(exp_dir, 'test_chk_pt')
+    train_smry_dir = os.path.join(exp_dir, 'train_smry_dir')
+    test_smry_dir = os.path.join(exp_dir, 'test_smry_dir')
+
+    # Now we also want to include a text file along with all of this, so lets do that now!
+    exp_info_text_path = os.path.join(exp_dir, 'testing_info_.txt')
+    with open(exp_info_text_path, "w") as info_text_file:
+        # Lets fill in some important information in here!
+        info_text_file.write('A.Lons & S.Picard')
+        info_text_file.write('\n\nDeep Learning - Breast Cancer - Benign vs. Malignant Identification')
+        info_text_file.write("\n\n########################################################################################################################")
+        info_text_file.write('\n\n                                           EXPERIMENTAL VARIABLES AND PARAMS')
+        info_text_file.write('\n\nExamples per Epoch: ' + str(n_examples_per_epoch))
+        info_text_file.write('\nBatch size: ' + str(batch_size))
+        info_text_file.write('\nNumber of target Epochs: ' + str(n_epochs))
+        info_text_file.write('\nBatch normalization: ' + str(batch_norm))
+        info_text_file.write('\nRegularization Beta: ' + str(regulizer))
+        info_text_file.write('\nLearning rate: ' + str(learning_rate))
+        info_text_file.write('\n\nThe file-names of the data used here during testing are ... ')
+        for file_name in test_filenames:
+            info_text_file.write("\n" + file_name)
+        info_text_file.write("\n\n########################################################################################################################")
+
+    with tf.Graph().as_default() as g:
+
+        # Get images and labels,
+        with tf.device('/cpu:0'):
+            images, labels = ip.input_pipline(test_filenames, batch_size=batch_size, numb_pre_threads=4,
+                                              num_epochs=n_epochs+1, output_type='train')
+
+        with tf.device('/gpu:0'):
+            # Create the network graph, making sure to set 'is_training' to False.
+            prediction = model.generate_res_network(images, batch_size, n_classes, batch_norm=batch_norm,
+                                                    is_training=False, on_cpu=False, gpu=0, regulizer=regulizer,
+                                                    keep_prob=keep_prob)
+            # Find accuracy
+            with tf.name_scope('accuracy'):
+                with tf.name_scope('correct_prediction'):
+                    pred_arg_max = tf.argmax(prediction, 1)
+                    labl_arg_max = tf.argmax(labels, 1)
+                    correct_prediction = tf.equal(pred_arg_max, labl_arg_max)
+                with tf.name_scope('accuracy'):
+                    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+                    #tf.summary.scalar('accuracy', accuracy)
+
+        with tf.device('/cpu:0'):
+            with tf.name_scope('global_stepping'):
+                global_step = tf.Variable(0, name='global_step', trainable=False)
+
+        with tf.device('/cpu:0'):
+
+            # Create saver for writing training checkpoints
+            saver = tf.train.Saver(name='tf_graph_loader_op')
+
+            # Keeping track of best results!
+            best_accuracy = 0.0
+
+            # Lets keep track of starting run in file
+            with open(exp_info_text_path, "a") as info_text_file:
+                info_text_file.write('\n\n Beginning training at ' + str(datetime.new()))
+                info_text_file.write("\n\n Begin tracking results ... ")
+
+            # We want to keep on running the evaluation until the other training python thread step is complete!
+            while not finished_training_event.is_set():
+
+                start_time = time.time()
+
+                # Create a session
+                sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=False))
+
+                init_op = tf.group(tf.local_variables_initializer(), name='initialize_op')
+
+                sess.run(init_op)
+
+                # Restore the check point
+                chkp = tf.train.latest_checkpoint(train_chk_pt_dir)
+                saver.restore(sess, chkp)
+
+                print("\nThe global step value is %d" % sess.run(global_step))
+
+                # Make a coordinator,
+                coord = tf.train.Coordinator()
+                threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+                # Train over 90% of examples, save the others for testing
+                num_training_batches = int(n_examples_per_epoch/batch_size)
+                acc_list = []
+
+                for j in range(num_training_batches-3):
+
+                    acc, summary = sess.run([accuracy])
+                    acc_list.append(acc)
+
+                coord.request_stop()
+                coord.join(threads)
+                sess.close()
+
+                avg_accuracy = sum(acc_list) / float(len(acc_list))
+
+                if avg_accuracy > best_accuracy:
+                    # We need to save this thing
+                    saver.save(sess, test_chk_pt_dir, global_step=global_step, max_to_keep=5)
+                    best_accuracy = avg_accuracy
+                    #
+                    # Lets keep track of starting run in file
+                    with open(exp_info_text_path, "a") as info_text_file:
+                        # Lets fill in some important information in here!
+                        info_text_file.write('\nAccuracy at global step: ' + str(global_step) + " is: " + str(best_accuracy))
+
+                print("Global-Step ", global_step)
+                print('  Accuracy:', avg_accuracy)
+                print('  Best Accuracy: ', best_accuracy)
+                print('  Epoch run-time:', time.time() - start_time)
+
+            # Once we are kicked out and forced to quit evaluating, now we want to record our final results in the
+            # evaluation form.
+            print("\n Exiting evalution loop, writing to 'eval_results.txt' ")
+
+            cumm_res_text_path = os.path.join(save_path, 'cumulative_results.txt')
+            with open(cumm_res_text_path, "a") as info_text_file:
+                # Lets fill in some important information in here!
+
+                info_text_file.write("\n\n########################################################################################################################")
+                info_text_file.write('\n                                           EXPERIMENTAL RESULTS')
+                info_text_file.write('\nResults for experiment in ' + exp_dir)
+                info_text_file.write('\nBest Accuracy of :' + str(best_accuracy) )
+                info_text_file.write('\n\nExamples per Epoch: ' + str(n_examples_per_epoch))
+                info_text_file.write('\nBatch size: ' + str(batch_size))
+                info_text_file.write('\nNumber of target Epochs: ' + str(n_epochs))
+                info_text_file.write('\nBatch normalization: ' + str(batch_norm))
+                info_text_file.write('\nRegularization Beta: ' + str(regulizer))
+                info_text_file.write('\nLearning rate: ' + str(learning_rate))
+                info_text_file.write('\n\nThe file-names of the data used here during testing are ... ')
+                for file_name in test_filenames:
+                    info_text_file.write("\n" + file_name)
+                info_text_file.write("\n\n########################################################################################################################")
+
+
 if __name__ == "__main__":
 
+    train_filenames = ['data_files/tfr_files/augmented_sets/set_00/train/train_data_-00000-of-00004',
+                       'data_files/tfr_files/augmented_sets/set_00/train/train_data_-00001-of-00004',
+                       'data_files/tfr_files/augmented_sets/set_00/train/train_data_-00002-of-00004',
+                       'data_files/tfr_files/augmented_sets/set_00/train/train_data_-00003-of-00004']
 
-    epochs = 3
-    for epoch in range(epochs):
-        print("\nStarting Epoch %d" % epoch)
+    test_filenames = ['data_files/tfr_files/augmented_sets/set_00/test/test_data_-00000-of-00004',
+                      'data_files/tfr_files/augmented_sets/set_00/test/test_data_-00001-of-00004',
+                      'data_files/tfr_files/augmented_sets/set_00/test/test_data_-00002-of-00004',
+                      'data_files/tfr_files/augmented_sets/set_00/test/test_data_-00003-of-00004']
 
-        foundit = mp.Event()
-        quit = mp.Event()
-        processes = []
-        for i in range(4):
-            p = mp.Process(target=worker, args=(i, quit, foundit))
-            p.start()
-            processes.append(p)
-        # According to the Event() documentation: This "wait" Blocks until the internal flag is true. If the internal
-        # flag is true on entry it will return immediately. Othersie it blocks until another thread calls set() to
-        # set the flag to true
-        foundit.wait()
-        quit.set()
+    finished_first_epoch_event = mp.event()
+    finished_training_event = mp.event()
+    save_path = 'saved_results'
+    n_examples_per_epoch = 100
+    n_classes = 7
+    batch_size = 10
+    n_epochs = 3
+    batch_norm = True
+    regulizer = .8
+    keep_prob = .8
+    learning_rate = .001
 
-        # Added this so that we wait for all the processes to end.
-        for proc in processes:
-            proc.join()
+    p1 = mp.Process(target=training_session, args=(finished_first_epoch_event, finished_training_event, save_path,
+                                                   train_filenames, n_examples_per_epoch, n_classes, batch_size,
+                                                   n_epochs, batch_norm, regulizer, keep_prob, learning_rate))
+    p1.start()
+    finished_first_epoch_event.wait()
+
+    p2 = mp.Process(target=evaluation_session, args=(finished_training_event, save_path, test_filenames,
+                                                     n_examples_per_epoch, n_classes, batch_size, n_epochs, batch_norm,
+                                                     regulizer, keep_prob, learning_rate))
+    p2.start()
+    finished_training_event.wait()
+
+    p1.join()
+    p2.join()
+
+
+
+
