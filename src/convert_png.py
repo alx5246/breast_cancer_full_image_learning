@@ -288,8 +288,8 @@ def _find_image_files(data_dir, labels_file):
         texts: list of strings; each string is the class, e.g. 'dog'
         labels: list of integer; each integer identifies the ground truth.
     """
-
-    print('Determining list of input files and labels from %s.' % data_dir)
+    print("\n\nRunning _find_image_files ... ... ... ")
+    print('..Determining list of input files and labels from %s.' % data_dir)
     unique_labels = [l.strip() for l in tf.gfile.FastGFile(labels_file, 'r').readlines()]
 
     labels = []
@@ -311,7 +311,7 @@ def _find_image_files(data_dir, labels_file):
         filenames.extend(matching_files)
 
         if not label_index % 100:
-            print('Finished finding files in %d of %d classes.' % (label_index, len(labels)))
+            print('....Finished finding files in %d of %d classes.' % (label_index, len(labels)))
         label_index += 1
 
     # Shuffle the ordering of all image files in order to guarantee
@@ -326,7 +326,7 @@ def _find_image_files(data_dir, labels_file):
     texts = [texts[i] for i in shuffled_index]
     labels = [labels[i] for i in shuffled_index]
 
-    print('Found %d PNG files across %d labels inside %s.' %
+    print('..Found %d PNG files across %d labels inside %s.' %
         (len(filenames), len(unique_labels), data_dir))
     return filenames, texts, labels
 
@@ -335,24 +335,32 @@ if __name__ == '__main__':
 
     # This is tell how many threads to use and directoreis to work in. Some of this code is hardcoded.
     NUM_THREADS = 1
-    #OUTPUT_DIRECTOY = 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test'
-    OUTPUT_DIRECTOY = 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test'
+    #OUTPUT_DIRECTOY = 'data_files/tfr_files/cancer_data_orig/test'
+    #OUTPUT_DIRECTOY = 'data_files/tfr_files/cancer_data_orig/train'
+    OUTPUT_DIRECTOY = 'data_files/tfr_files/augmented_sets/set_01/train'
 
     # Give the data directories
-    #data_dir = 'data_files/png_files/png_set_00/set_16bit_128x128/Test'
-    data_dir = 'data_files/png_files/png_set_00/set_16bit_128x128/Test'
+    #data_dir = 'data_files/png_files/cancer_data_orig/Test'
+    #data_dir = 'data_files/png_files/cancer_data_orig/Training'
+    data_dir = 'data_files/png_files/augmented_sets/set_01/train'
 
     # Give label text files, these are the folder labels we will be looking for!
-    labels_file = 'data_files/png_files/png_set_00/set_16bit_128x128/classes.txt'
+    #labels_file = 'data_files/png_files/cancer_data_orig/Test/classes.txt'
+    labels_file = 'data_files/png_files/augmented_sets/set_01/test/classes.txt'
+
+    # Give name to data
+    name = 'train_data_'
 
     filenames, texts, labels = _find_image_files(data_dir, labels_file)
-    print(filenames)
-    name ='test_data_'
+    #print(filenames)
     #name = 'train_data_'
-    print(set(labels))
-    print(set(texts))
-    num_shards = 10
-    #num_shards = 1
+    print("\n..The lebels found are ", set(labels))
+    print("..The text-labels are ", set(texts))
+    print("\n")
+    num_shards = 4
+    #for i in range(len(labels)):
+    for i in range(15):
+        print("label: ",labels[i],", with class: ",texts[i])
     _process_image_files(name, filenames, texts, labels, num_shards)
 
 

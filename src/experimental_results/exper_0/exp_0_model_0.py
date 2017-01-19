@@ -71,10 +71,8 @@
 # fc-layer-2128 (hidden layer-ReLu?)
 #
 
-
 import tensorflow as tf
-import full_trail_test.network_layers as nl
-
+import experimental_results.exper_0.exp_0_network_layers as nl
 
 def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_training=True, on_cpu=True, gpu=0,
                          regulizer=0.0, keep_prob=0.0):
@@ -212,8 +210,7 @@ def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_trai
         reshaped_input = tf.reshape(net_layers[-1], [batch_size, -1], name='reshape_input')
         # I am getting the shape of the output, simply following what is done in cifar10.inference(images)
         flattened_dim = reshaped_input.get_shape()[1].value
-        net_layers.append(nl.gen_output_layer(reshaped_input, [flattened_dim, n_classes], [n_classes], on_cpu=on_cpu,
-                                              gpu=gpu))
+        net_layers.append(nl.gen_output_layer(reshaped_input, [flattened_dim, n_classes], [n_classes]))
 
     return net_layers[-1]
 

@@ -135,14 +135,14 @@ if __name__ == '__main__':
     # the data I have converted using convertPng.py.
 
     # Get file names
-    filenames = ['data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00001-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00002-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00003-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00004-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00005-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00006-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00007-of-00010',
-                 'data_files/tfr_files/tfr_set_00/set_16bit_128x128/test/test_data_-00008-of-00010']
+    filenames = ['data_files/tfr_files/tfr_set_00/set_00/test/test_data_-00001-of-00010',
+                 'data_files/tfr_files/tfr_set_00/set_00/test/test_data_-00002-of-00010',
+                 'data_files/tfr_files/tfr_set_00/set_00/test/test_data_-00003-of-00010',
+                 'data_files/tfr_files/tfr_set_00/set_00/test/test_data_-00004-of-00010',
+                 'data_files/tfr_files/tfr_set_00/set_00/test/test_data_-00005-of-00010',
+                 'data_files/tfr_files/tfr_set_00/set_00/test/test_data_-00006-of-00010',
+                 'data_files/tfr_files/tfr_set_00/set_00/test/test_data_-00007-of-00010',
+                 'data_files/tfr_files/tfr_set_00/set_00/test/test_data_-00008-of-00010']
 
     #
     images, labels = input_pipline(filenames, batch_size=10, numb_pre_threads=1, num_epochs=1, output_type='train',
