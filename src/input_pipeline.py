@@ -100,7 +100,7 @@ def input_pipline(file_names, batch_size, numb_pre_threads, num_epochs = 1, outp
             # must be larger than "min_after_dequeue" and the amount larger determines the maximm we will prefetch. The
             # recommendation: for capacity is min_after_dequeue + (num_threads + saftey factor) * batch_size
             # From cifar10_input.input(), setup min numb of examples in the queue
-            min_fraction_of_examples_in_queue = .6
+            min_fraction_of_examples_in_queue = 1.0
             min_queue_examples = int(batch_size * min_fraction_of_examples_in_queue)
             min_after_dequeue = min_queue_examples
             capacity = min_queue_examples + 5 * batch_size
