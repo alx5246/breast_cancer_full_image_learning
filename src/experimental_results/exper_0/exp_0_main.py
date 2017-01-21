@@ -232,8 +232,9 @@ def training_session(data_description_txt_file, finished_first_epoch_event, fini
     finished_training_event.set()
 
 
-def evaluation_session(data_description_txt_file, finished_training_event, save_path, test_filenames, n_examples_per_epoch, n_classes, batch_size,
-                       n_epochs, batch_norm, regulizer, keep_prob, learning_rate):
+def evaluation_session(data_description_txt_file, finished_training_event, save_path, test_filenames,
+                       n_examples_per_epoch, n_classes, batch_size, n_epochs, batch_norm, regulizer, keep_prob,
+                       learning_rate):
 
     # We need to import the os in order to handle files and setting up CUDA correctly
     import os
@@ -299,10 +300,10 @@ def evaluation_session(data_description_txt_file, finished_training_event, save_
             images, labels = ip.input_pipline(test_filenames, batch_size=batch_size, numb_pre_threads=4,
                                               num_epochs=n_epochs+1, output_type='train')
 
-        with tf.device('/gpu:0'):
+        with tf.device('/cpu:0'):
             # Create the network graph, making sure to set 'is_training' to False.
             prediction = model.generate_res_network(images, batch_size, n_classes, batch_norm=batch_norm,
-                                                    is_training=False, on_cpu=False, gpu=0, regulizer=regulizer,
+                                                    is_training=False, on_cpu=True, gpu=0, regulizer=regulizer,
                                                     keep_prob=keep_prob)
             # Find accuracy
             with tf.name_scope('accuracy'):
@@ -420,11 +421,19 @@ def evaluation_session(data_description_txt_file, finished_training_event, save_
                 info_text_file.write('\n\nThe file-names of the data used here during testing are ... ')
                 for file_name in test_filenames:
                     info_text_file.write("\n" + file_name)
+                info_text_file.write('\n\nThe description associated with the data is ... ')
+                with open(data_description_txt_file, "r") as set_desc:
+                    # Grab all lines of the description file and put into an array
+                    lines_of_text = set_desc.readlines()
+                    # Now put all these lines into our file
+                    for text_line in lines_of_text:
+                        info_text_file.write(text_line)
                 info_text_file.write("\n\n########################################################################################################################")
 
 
 if __name__ == "__main__":
 
+    # I need to see from what directory I am launching this stuff from.
     import os
     print(os.path.dirname(__file__))
 
@@ -439,7 +448,6 @@ if __name__ == "__main__":
                       '../../data_files/tfr_files/augmented_sets/set_00/test/test_data_-00001-of-00004',
                       '../../data_files/tfr_files/augmented_sets/set_00/test/test_data_-00002-of-00004',
                       '../../data_files/tfr_files/augmented_sets/set_00/test/test_data_-00003-of-00004']
-
 
     finished_first_epoch_event = mp.Event()
     finished_training_event = mp.Event()
