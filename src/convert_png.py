@@ -346,7 +346,8 @@ if __name__ == '__main__':
 
     # Give label text files, these are the folder labels we will be looking for!
     #labels_file = 'data_files/png_files/cancer_data_orig/Test/classes.txt'
-    labels_file = 'data_files/png_files/augmented_sets/set_01/test/classes.txt'
+    labels_file = 'data_files/png_files/augmented_sets/set_01/train/classes.txt'
+    #              'data_files/png_files/altered_sets/cancer_data_altered_1_128x128/test/classes.txt
 
     # Give name to data
     name = 'train_data_'
