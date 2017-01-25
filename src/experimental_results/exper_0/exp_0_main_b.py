@@ -50,7 +50,7 @@ def training_session(data_description_txt_file, finished_first_epoch_event, fini
     # We need to import the os in order to handle files and setting up CUDA correctly
     import os
     # Make sure we set the visable CUDA devices
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # To make sure this is actually working
     #from tensorflow.python.client import device_lib
     #print(device_lib.list_local_devices())
@@ -233,23 +233,20 @@ def training_session(data_description_txt_file, finished_first_epoch_event, fini
     finished_training_event.set()
 
 
-def evaluation_session(data_description_txt_file, finished_training_event, performance_drop_event, drop_count_limit,
-                       save_path, test_filenames,
+def evaluation_session(data_description_txt_file, finished_training_event, save_path, test_filenames,
                        n_examples_per_epoch, n_classes, batch_size, n_epochs, batch_norm, regulizer, keep_prob,
                        learning_rate):
 
     # We need to import the os in order to handle files and setting up CUDA correctly
     import os
-
     # Make sure we set the visable CUDA devices
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
-    # To make sure this is actually working, we want to print out some things to tell us which GPU device this thing
-    # is seeing.
+    # To make sure this is actually working
     #from tensorflow.python.client import device_lib
     #print(device_lib.list_local_devices())
 
     # The first step is going to be to find the directory where we are saving the training data, it should be the
-    # directory with the largest number! We will find this one by looping over the directories found.
+    # directory with the largest number! We will find this one by looping over
     list_of_dirs = os.listdir(save_path)
     val = -1
     ind = 0
@@ -259,25 +256,20 @@ def evaluation_session(data_description_txt_file, finished_training_event, perfo
             if val < int(last_chars):
                 ind = zx
                 val = int(last_chars)
-
-    # Now we know the path name! Now we need to find the path's to the sub-directories
-    exp_dir = os.path.join(save_path, list_of_dirs[ind])      # The primary directory we want to be in
-    train_chk_pt_dir = os.path.join(exp_dir, 'train_chk_pt')  # Sub-directory, storing training chk-pts
-    test_chk_pt_dir = os.path.join(exp_dir, 'test_chk_pt')    # Sub-directory, storing testing chk-pts (best networks)
-    #train_smry_dir = os.path.join(exp_dir, 'train_smry_dir')  # Sub-directory, storing training summaries
-    test_smry_dir = os.path.join(exp_dir, 'test_smry_dir')    # Sub-directory, storing testing summaries
+    # Now we know the path name!
+    exp_dir = os.path.join(save_path, list_of_dirs[ind])
+    train_chk_pt_dir = os.path.join(exp_dir, 'train_chk_pt')
+    test_chk_pt_dir = os.path.join(exp_dir, 'test_chk_pt')
+    train_smry_dir = os.path.join(exp_dir, 'train_smry_dir')
+    test_smry_dir = os.path.join(exp_dir, 'test_smry_dir')
 
     # Wait are these right? Only sort of. In order to load a chk_pt we have to point to the directory, in order to save
-    # we have to point to the actual file! STUPID FUCKING TENSORFLOW!
+    # we have to point to the actual file! STUPID
     # train_chk_pt_dir = os.path.join(train_chk_pt_dir, 'chk_pt')
     test_chk_pt_dir = os.path.join(test_chk_pt_dir, 'chk_pt')
 
-    # Include a log-file that writes out a report so we can figure out why we are crashing!
-    run_log_text_path = os.path.join(exp_dir, 'testing_log_.txt')
-
     # Now we also want to include a text file along with all of this, so lets do that now!
     exp_info_text_path = os.path.join(exp_dir, 'testing_info_.txt')
-
     with open(exp_info_text_path, "w") as info_text_file:
         # Lets fill in some important information in here!
         info_text_file.write('A.Lons & S.Picard')
@@ -339,198 +331,87 @@ def evaluation_session(data_description_txt_file, finished_training_event, perfo
             # Keeping track of best results!
             best_accuracy = 0.0
 
-            # Set up counter that if we surpass a number of epochs over we jump out of the testing and training
-            acc_exit_counter = 0
-
-            # Set up counter so we know about global step value
-            last_global_step = -1
-
             # Lets keep track of starting run in file
-            with open(run_log_text_path, "a") as log_file:
-                log_file.write('\n\n Beginning training at ' + str(datetime.now()))
-                log_file.write("\n\n Begin tracking results ... ")
+            with open(exp_info_text_path, "a") as info_text_file:
+                info_text_file.write('\n\n Beginning training at ' + str(datetime.now()))
+                info_text_file.write("\n\n Begin tracking results ... ")
 
             # We want to keep on running the evaluation until the other training python thread step is complete!
-            while not finished_training_event.is_set() or performance_drop_event.is_set():
+            while not finished_training_event.is_set():
+            #while best_accuracy < .0001:
 
-                # Add try anc excepts to handle things not working, because I am getting processes that run away.
-                try:
+                start_time = time.time()
 
-                    # Lets keep track of starting run in file
-                    with open(run_log_text_path, "a") as log_file:
-                        log_file.write('\n\nStarting next iteration')
-                        log_file.write('\n... (a) starting run-time tracking')
+                # Create a session
+                sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=False))
 
-                    start_time = time.time()
+                merged = tf.summary.merge_all()
+                summary_writer = tf.summary.FileWriter(test_smry_dir, g)
 
-                    # Lets keep track of starting run in file
-                    with open(run_log_text_path, "a") as log_file:
-                        log_file.write('\n... (b) creating tf.Session')
+                init_op = tf.group(tf.local_variables_initializer(), tf.global_variables_initializer(), name='initialize_op')
 
-                    # Create a session
-                    sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=False))
+                sess.run(init_op)
 
-                    # Lets keep track of starting run in file
-                    with open(run_log_text_path, "a") as log_file:
-                        log_file.write('\n... (c) merging summaries')
+                # Restore the check point
+                chkp = tf.train.latest_checkpoint(train_chk_pt_dir)
+                saver.restore(sess, chkp)
 
-                    merged = tf.summary.merge_all()
-                    summary_writer = tf.summary.FileWriter(test_smry_dir, g)
+                print("\nTESTING, starting evaluation of network at Global-Step %d ... \n" % sess.run(global_step))
 
-                    # Lets keep track of starting run in file
-                    with open(run_log_text_path, "a") as log_file:
-                        log_file.write('\n... (d) initialize variables')
+                # Make a coordinator,
+                coord = tf.train.Coordinator()
+                threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-                    init_op = tf.group(tf.local_variables_initializer(), tf.global_variables_initializer(), name='initialize_op')
-                    sess.run(init_op)
+                num_training_batches = int(n_examples_per_epoch/batch_size)
+                acc_list = []
 
-                    #
-                    with open(run_log_text_path, "a") as log_file:
-                        log_file.write('\n... (e) find chk-pt')
+                for j in range(num_training_batches-3):
 
-                    # Restore the check point
-                    chkp = tf.train.latest_checkpoint(train_chk_pt_dir)
-
-                    # Lets keep track of starting run in file
-                    with open(run_log_text_path, "a") as log_file:
-                        log_file.write('\n... (f) load chk-pt')
-
-                    # Restore tf.graph from file
-                    saver.restore(sess, chkp)
-
-                    # Check global-step, if we are not at a new global-step, we do not need to run calculations again.
-                    new_global_step = sess.run(global_step)
-
-                    if new_global_step > last_global_step:
-
-                        last_global_step += 1
-
-                        print("\nTESTING, starting evaluation of network at Global-Step %d ... \n" %
-                              sess.run(global_step))
-
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (g) generate coordinators and threads')
-
-                        # Make a coordinator,
-                        coord = tf.train.Coordinator()
-                        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-
-                        # Set up the for-loop to run accuracy calculation over testing-data batches
-                        num_training_batches = int(n_examples_per_epoch/batch_size)
-                        acc_list = []
-
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (h) iterate over number of training batches')
-
-                        for j in range(num_training_batches):
-
-                            # Every so often to write a summary out. This is really just to be sure if we need to,
-                            # look back at what was run as a sanity check.
-                            if j % 20 == 0:
-                                acc, summary_res = sess.run([accuracy, merged])
-                                acc_list.append(acc)
-                                summary_writer.add_summary(summary_res, sess.run(global_step * (j + 1)))
-                            else:
-                                acc = sess.run(accuracy)
-                                acc_list.append(acc)
-
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (i) find accuracy ')
-
-                        # The list of accuracies is actually a list of lists, so we need to loop through and find total.
-                        avg_accuracy = sum(acc_list) / float(len(acc_list))
-
-                        if avg_accuracy > best_accuracy:
-
-                            with open(run_log_text_path, "a") as log_file:
-                                log_file.write('\n... (i-a) found good accuracy, save the graph')
-
-                            # We need to save this thing
-                            saver.save(sess, test_chk_pt_dir, global_step=global_step)
-                            best_accuracy = avg_accuracy
-
-                            # Reset best counter. If this number gets too big (bigger 'than drop_count_limit'), then
-                            # we will exit testing and training.
-                            acc_exit_counter = 0
-
-                        else:
-
-                            # Increment best counter. If this number gets too big (bigger 'than drop_count_limit'), then
-                            # we will exit testing and training.
-                            acc_exit_counter += 1
-
-                            with open(run_log_text_path, "a") as log_file:
-                                log_file.write('\n... (i-a) found accuracy is not increasing. Drop count at '
-                                               + str(acc_exit_counter) + " of " + str(drop_count_limit))
-
-                            # Check if it is time to exit both the training and testing because we are not improving
-                            # in accuracy
-                            if drop_count_limit < acc_exit_counter:
-                                performance_drop_event.set()
-
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (j) writing testing accuracy to file')
-
-                        # Record accuracy at every step!
-                        with open(exp_info_text_path, "a") as info_text_file:
-                            # Lets fill in some important information in here!
-                            info_text_file.write('\nAccuracy at global training step: ' + str(sess.run(global_step)) + " is: "
-                                                 + str(avg_accuracy) + ", best accuracy is: " + str(best_accuracy))
-
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (k) printing out results to screen from last testing iteration')
-
-                        print("\nTESTING, the results of net evaluation at Global-Step %d are ..." % sess.run(global_step))
-                        print('  Accuracy:', avg_accuracy)
-                        print('  Best Accuracy: ', best_accuracy)
-                        print('  Epoch run-time:', time.time() - start_time, "\n")
-                        print('  Drop count: ', str(acc_exit_counter), " of ", str(drop_count_limit), " allowed")
-
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (l) cleaning up threads and coordinator')
-
-                        coord.request_stop()
-                        coord.join(threads)
-                        sess.close()
-
-                        # Lets keep track of starting run in file
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (m) sleeping for a bit')
-
-                        # Just to make sure things close up okay
-                        time.sleep(2)
-
+                    # Every so often to write a summary out. This is really just to be sure if we need to, look back
+                    # at what was run as a sanity check.
+                    if j % 20 == 0:
+                        acc, summary_res = sess.run([accuracy, merged])
+                        acc_list.append(acc)
+                        summary_writer.add_summary(summary_res, sess.run(global_step * (j + 1)))
                     else:
+                        acc = sess.run(accuracy)
+                        acc_list.append(acc)
 
-                        #
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (g) global-step not new, starting loop over again')
+                # The list of accuracies is actually a list of lists, so we need to loop through and find total.
+                avg_accuracy = sum(acc_list) / float(len(acc_list))
 
-                        print("\nTESTING, NOT starting evaluation, still at same global-step")
+                if avg_accuracy > best_accuracy:
+                    # We need to save this thing
+                    saver.save(sess, test_chk_pt_dir, global_step=global_step)
+                    best_accuracy = avg_accuracy
+                    #
 
-                except:
+                # Lets keep track of starting run in file
+                with open(exp_info_text_path, "a") as info_text_file:
+                    # Lets fill in some important information in here!
+                    info_text_file.write('\nAccuracy at global training step: ' + str(sess.run(global_step)) + " is: "
+                                         + str(avg_accuracy) + ", best accuracy is: " + str(best_accuracy))
 
-                    # Lets keep track of starting run in file
-                    with open(run_log_text_path, "a") as log_file:
-                        log_file.write('\nERROR ERROR, oops, something went wrong!')
 
-                    print("\n\n\nSOMETHING IN THE TESTING WENT WRONG!!, WILL TRY AGAIN, BEGIN SLEEP FOR A BIT")
-                    time.sleep(2.0)
+                print("\nTESTING, the results of net evaluation at Global-Step %d are ..." % sess.run(global_step))
+                print('  Accuracy:', avg_accuracy)
+                print('  Best Accuracy: ', best_accuracy)
+                print('  Epoch run-time:', time.time() - start_time, "\n")
 
-            if performance_drop_event.is_set():
-                with open(run_log_text_path, "a") as log_file:
-                    log_file.write('\n... ... ... limit in epochs with no accuracy improvement hit, exited test loop')
-                print("\nTESTING, limit in epochs with no accuracy improvement hit, writing to eval_results.txt \n")
-            else:
-                with open(run_log_text_path, "a") as log_file:
-                    log_file.write('\n... ... ... training finished, exited test loop')
-                print("\nTESTING, training finished, writing to eval_results.txt \n")
+                coord.request_stop()
+                coord.join(threads)
+                sess.close()
 
-            # Add text to the final results of the testing, isolating the best results of the bunch.
+                #break
+
+            # Once we are kicked out and forced to quit evaluating, now we want to record our final results in the
+            # cumulative evaluation form. That is where we will record all of the results.
+            print("\nTESTING, Exiting evaluation loop, writing to 'eval_results.txt' \n")
+
             cumm_res_text_path = os.path.join(save_path, 'cumulative_results.txt')
             with open(cumm_res_text_path, "a") as info_text_file:
-
                 # Lets fill in some important information in here!
+
                 info_text_file.write("\n\n########################################################################################################################")
                 info_text_file.write('\n                                           EXPERIMENTAL RESULTS')
                 info_text_file.write('\nResults for experiment in ' + exp_dir)
@@ -559,6 +440,7 @@ if __name__ == "__main__":
 
     # I may need to see from what directory I am launching this stuff from.
     import os
+    #print(os.path.dirname(__file__))
 
     train_filenames_list = []
     test_filenames_list = []
@@ -566,37 +448,20 @@ if __name__ == "__main__":
     train_numbexamples_list = []
     test_numbexamples_list = []
 
-    # Grab the altered data set ("soft" distortion of rotations and translations)
-    train_filenames_list.append(
-        ['../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/train/train_data_-00000-of-00004',
-         '../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/train/train_data_-00001-of-00004',
-         '../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/train/train_data_-00002-of-00004',
-         '../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/train/train_data_-00003-of-00004'])
-    test_filenames_list.append(
-        ['../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/test/test_data_-00000-of-00004',
-         '../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/test/test_data_-00001-of-00004',
-         '../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/test/test_data_-00002-of-00004',
-         '../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/test/test_data_-00003-of-00004'])
-    data_description_list.append('../../data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/set_info.txt')
-    train_numbexamples_list.append(6600)
+    # Grab the augmented data set ("soft" distortions of rotations and translations with caltech images as well)
+    train_filenames_list.append(['../../data_files/tfr_files/augmented_sets/set_01/train/train_data_-00000-of-00004',
+                                 '../../data_files/tfr_files/augmented_sets/set_01/train/train_data_-00001-of-00004',
+                                 '../../data_files/tfr_files/augmented_sets/set_01/train/train_data_-00002-of-00004',
+                                 '../../data_files/tfr_files/augmented_sets/set_01/train/train_data_-00003-of-00004'])
+    test_filenames_list.append(['../../data_files/tfr_files/augmented_sets/set_01/test/test_data_-00000-of-00004',
+                                '../../data_files/tfr_files/augmented_sets/set_01/test/test_data_-00001-of-00004',
+                                '../../data_files/tfr_files/augmented_sets/set_01/test/test_data_-00002-of-00004',
+                                '../../data_files/tfr_files/augmented_sets/set_01/test/test_data_-00003-of-00004'])
+    data_description_list.append('../../data_files/tfr_files/augmented_sets/set_01/set_info.txt')
+    train_numbexamples_list.append(9070)
     test_numbexamples_list.append(220)
 
-    # Grab the original data-set
-    train_filenames_list.append(
-        ['../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/train/train_data_-00000-of-00004',
-         '../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/train/train_data_-00001-of-00004',
-         '../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/train/train_data_-00002-of-00004',
-         '../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/train/train_data_-00003-of-00004'])
-    test_filenames_list.append(
-        ['../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/test/test_data_-00000-of-00004',
-         '../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/test/test_data_-00001-of-00004',
-         '../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/test/test_data_-00002-of-00004',
-         '../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/test/test_data_-00003-of-00004'])
-    data_description_list.append('../../data_files/tfr_files/orig_sets/cancer_data_orig_128x128/set_info.txt')
-    train_numbexamples_list.append(1000)
-    test_numbexamples_list.append(220)
-
-    save_path = 'saved_results_1/part_a'
+    save_path = 'saved_results_1/part_b'
     n_classes = 7
     batch_size = 50
     n_epochs = 250
@@ -635,7 +500,6 @@ if __name__ == "__main__":
                     # each begin
                     finished_first_epoch_event = mp.Event()
                     finished_training_event = mp.Event()
-                    acc_not_improve_event = mp.Event()
 
                     # Pull out the number of training examples
                     n_examples_per_epoch = train_numbexamples_list[i]
@@ -652,8 +516,7 @@ if __name__ == "__main__":
                     # Pull out the number of testing examples
                     n_examples_per_epoch = test_numbexamples_list[i]
                     # Start the testing
-                    p2 = mp.Process(target=evaluation_session, args=(data_description, finished_training_event, 10,
-                                                                     acc_not_improve_event, save_path,
+                    p2 = mp.Process(target=evaluation_session, args=(data_description, finished_training_event, save_path,
                                                                      test_filenames,
                                                                      n_examples_per_epoch, n_classes, batch_size, n_epochs,
                                                                      batch_norm,
@@ -665,7 +528,3 @@ if __name__ == "__main__":
 
                     p1.join()
                     p2.join()
-
-
-
-

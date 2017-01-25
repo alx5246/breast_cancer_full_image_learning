@@ -44,7 +44,7 @@ def _variable_on_cpu(name, shape, initializer, trainable=True, regulizer=0.1):
         dtype = tf.float32
         var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype, trainable=trainable)
         # Add regularization to weights
-        if regulizer > .00001:
+        if regulizer > .0001:
             weight_reg = tf.mul(tf.nn.l2_loss(var), regulizer, name='weight_reg')
             tf.add_to_collection('losses', weight_reg)
     return var
@@ -67,7 +67,7 @@ def _variable_on_gpu(name, shape, initializer, trainable=True, regulizer=0.1, gp
         dtype = tf.float32
         var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype, trainable=trainable)
         # Add regularization to weights
-        if regulizer > .00001:
+        if regulizer > .0001:
             weight_reg = tf.mul(tf.nn.l2_loss(var), regulizer, name='weight_reg')
             tf.add_to_collection('losses', weight_reg)
     return var
@@ -202,13 +202,15 @@ def gen_2dconv(input_tensor, conv_shape, strides, bias_shape, keep_prob=.85, bat
     if on_cpu:
         kernel = _variable_on_cpu("weights", conv_shape, initializer=tf.random_normal_initializer(),
                                   regulizer=regulizer)
+        # Biases do NOT have regulization https://plus.google.com/+IanGoodfellow/posts/QUaCJfvDpni
         biases = _variable_on_cpu("biases", bias_shape, initializer=tf.random_normal_initializer(),
-                                  regulizer=regulizer)
+                                  regulizer=0.0)
     else:
         kernel = _variable_on_gpu("weights", conv_shape, initializer=tf.random_normal_initializer(), gpu=gpu,
                                   regulizer=regulizer)
+        # Biases do NOT have regulization https://plus.google.com/+IanGoodfellow/posts/QUaCJfvDpni
         biases = _variable_on_gpu("biases", bias_shape, initializer=tf.random_normal_initializer(), gpu=gpu,
-                                  regulizer=regulizer)
+                                  regulizer=0.0)
 
     variable_summaries(kernel, 'weights')
     variable_summaries(biases, 'biases')
@@ -321,14 +323,16 @@ def gen_hidden_layer(input_tensor, weight_shape, bias_shape, batch_norm=True, is
         device_str = '/cpu:0'
         weights = _variable_on_cpu("weights", weight_shape, initializer=tf.random_normal_initializer(),
                                    regulizer=regulizer)
+        # Biases do NOT have regulization https://plus.google.com/+IanGoodfellow/posts/QUaCJfvDpni
         biases = _variable_on_cpu("biases", bias_shape, initializer=tf.random_normal_initializer(),
-                                   regulizer=regulizer)
+                                   regulizer=0.0)
     else:
         device_str = '/gpu:%d' % gpu
         weights = _variable_on_gpu("weights", weight_shape, initializer=tf.random_normal_initializer(), gpu=gpu,
                                    regulizer=regulizer)
+        # Biases do NOT have regulization https://plus.google.com/+IanGoodfellow/posts/QUaCJfvDpni
         biases = _variable_on_gpu("biases", bias_shape, initializer=tf.random_normal_initializer(), gpu=gpu,
-                                   regulizer=regulizer)
+                                   regulizer=0.0)
 
     variable_summaries(weights, 'weights')
     variable_summaries(biases, 'biases')
@@ -362,14 +366,16 @@ def gen_output_layer(input, weight_shape, bias_shape, on_cpu=True, gpu=0, reguli
         device_str = '/cpu:0'
         weights = _variable_on_cpu("weights", weight_shape, initializer=tf.random_normal_initializer(),
                                    regulizer=regulizer)
+        # Biases do NOT have regulization https://plus.google.com/+IanGoodfellow/posts/QUaCJfvDpni
         biases = _variable_on_cpu("biases", bias_shape, initializer=tf.random_normal_initializer(),
-                                   regulizer=regulizer)
+                                   regulizer=0.0)
     else:
         device_str = '/gpu:%d' % gpu
         weights = _variable_on_gpu("weights", weight_shape, initializer=tf.random_normal_initializer(), gpu=gpu,
                                    regulizer=regulizer)
+        # Biases do NOT have regulization https://plus.google.com/+IanGoodfellow/posts/QUaCJfvDpni
         biases = _variable_on_gpu("biases", bias_shape, initializer=tf.random_normal_initializer(), gpu=gpu,
-                                   regulizer=regulizer)
+                                   regulizer=0.0)
 
     variable_summaries(weights, 'weights')
     variable_summaries(biases, 'biases')
