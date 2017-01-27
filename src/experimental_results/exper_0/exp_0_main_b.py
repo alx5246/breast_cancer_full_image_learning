@@ -173,8 +173,14 @@ def training_session(is_restart, data_description_txt_file, finished_first_epoch
         with tf.device('/gpu:0'):
             with tf.name_scope('optimizer'):
                 # Now generate optimizer!
-                optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(total_loss,
-                                                                                         name='adam_optimizer')
+                # optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(total_loss,
+                #                                                                         name='adam_optimizer')
+                # Now make the optimizer with gradient clipping! This should help as the training goes onwards and
+                # which in turn makes the gradients larger apparently.
+                opt_adam = tf.train.AdadeltaOptimizer(learning_rate=learning_rate, name='adam_optim')
+                gvs = opt_adam.compute_gradients(total_loss)
+                capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+                optimizer = opt_adam.apply_gradients(capped_gvs)
 
         with open(run_log_text_path, "a") as log_file:
             log_file.write("\nGenerate global-stepper")
