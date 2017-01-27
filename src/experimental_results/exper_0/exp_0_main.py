@@ -328,7 +328,7 @@ def training_session(is_restart, data_description_txt_file, finished_first_epoch
                             with open(fail_log_test_path, "a") as fail_log:
                                 fail_log.write('\nERROR ERROR, problem with saving ch-pt (unable to save graph) at '
                                                'global-step: ' + str(sess.run(global_step)) + " at time: " +
-                                               str(sess.run(datetime.now())))
+                                               str(datetime.now()))
 
                     except:
 
@@ -338,7 +338,7 @@ def training_session(is_restart, data_description_txt_file, finished_first_epoch
 
                         with open(fail_log_test_path, "a") as fail_log:
                             fail_log.write('\nERROR ERROR, oops, something went wrong in try-except at global-step: '
-                                           + str(sess.run(global_step) + " at time " + str(sess.run(datetime.now()))))
+                                           + str(sess.run(global_step) + " at time " + str(datetime.now())))
 
                         print("\nTRAINING: SOMETHING IN THE TESTING WENT WRONG!!, WILL TRY AGAIN, B"
                               "EGIN SLEEP FOR A BIT\n")
