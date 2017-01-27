@@ -45,7 +45,8 @@ def _variable_on_cpu(name, shape, initializer, trainable=True, regulizer=0.1):
         var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype, trainable=trainable)
         # Add regularization to weights
         if regulizer > .0001:
-            weight_reg = tf.mul(tf.nn.l2_loss(var), regulizer, name='weight_reg')
+            # We add small value for stability (also have the absolute value)
+            weight_reg = tf.mul(tf.nn.l2_loss(tf.add(tf.abs(var), .001)), regulizer, name='weight_reg')
             tf.add_to_collection('losses', weight_reg)
     return var
 
@@ -68,7 +69,8 @@ def _variable_on_gpu(name, shape, initializer, trainable=True, regulizer=0.1, gp
         var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype, trainable=trainable)
         # Add regularization to weights
         if regulizer > .0001:
-            weight_reg = tf.mul(tf.nn.l2_loss(var), regulizer, name='weight_reg')
+            # We add small value for stability (also have the absolute value)
+            weight_reg = tf.mul(tf.nn.l2_loss(tf.add(tf.abs(var), .001)), regulizer, name='weight_reg')
             tf.add_to_collection('losses', weight_reg)
     return var
 
