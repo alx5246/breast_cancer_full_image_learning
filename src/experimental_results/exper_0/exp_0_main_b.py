@@ -640,17 +640,18 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                             # Increment best counter. If this number gets too big (bigger 'than drop_count_limit'), then
                             # we will exit testing and training.
                             acc_exit_counter += 1
-
                             with open(run_log_text_path, "a") as log_file:
                                 log_file.write('\n... (i-a) found accuracy is not increasing. Drop count at '
                                                + str(acc_exit_counter) + " of " + str(performance_drop_count_limit))
 
                             # Check if it is time to exit both the training and testing because we are not improving
-                            # in accuracy
+                            # in accuracy. We do this by breaking out of this, but also by setting a multiprocesing
+                            # event which is how we communicate to the training thread that things are not improving.
                             if performance_drop_count_limit < acc_exit_counter:
+                                # Set multiprocessing event.
                                 performance_drop_event.set()
                                 # Now we need to break out of the for-loop, but before we do this we need to close out
-                                # of things
+                                # of things and clean up the threads.
                                 # summary_writer.close()
                                 coord.request_stop()
                                 coord.join(threads)
@@ -686,16 +687,8 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                         #sess.close()
                         time.sleep(2)
 
-                        # Lets keep track of starting run in file
-                        with open(run_log_text_path, "a") as log_file:
-                            log_file.write('\n... (m) sleeping for a bit')
-
-                        # Just to make sure things close up okay
-                        time.sleep(1.0)
-
                     else:
 
-                        #
                         with open(run_log_text_path, "a") as log_file:
                             log_file.write('\n... (g) global-step not new, starting loop over again')
 
@@ -724,6 +717,9 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                     print("\nTESTING: SOMETHING IN THE TESTING WENT WRONG!!, WILL TRY AGAIN, BEGIN SLEEP FOR A BIT\n")
                     time.sleep(2.0)
 
+            # We are about to leave this method, before doing so we need to write out more to our logs and summary
+            # information txt files.
+
             if performance_drop_event.is_set():
                 with open(run_log_text_path, "a") as log_file:
                     log_file.write('\n\nLEAVING TRAINING ... ... ... limit in epochs with no accuracy improvement hit, exited test loop')
@@ -737,7 +733,6 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
             # Add text to the final results of the testing, isolating the best results of the bunch.
             cumm_res_text_path = os.path.join(save_path, 'cumulative_results.txt')
             with open(cumm_res_text_path, "a") as info_text_file:
-
                 # Lets fill in some important information in here!
                 info_text_file.write("\n\n########################################################################################################################")
                 info_text_file.write('\n                                           EXPERIMENTAL RESULTS')
