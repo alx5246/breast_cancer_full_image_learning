@@ -539,12 +539,11 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                     # Create a session
                     sess = tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=False))
 
-
-                    with open(run_log_text_path, "a") as log_file:
-                        log_file.write('\n... (c) merging summaries')
-
-                    merged = tf.summary.merge_all()
-                    summary_writer = tf.summary.FileWriter(test_smry_dir, g)
+                    # AJL (Jan. 27) Somehow the summaries are super big, so I am going to kill them.
+                    #with open(run_log_text_path, "a") as log_file:
+                    #    log_file.write('\n... (c) merging summaries')
+                    #merged = tf.summary.merge_all()
+                    #summary_writer = tf.summary.FileWriter(test_smry_dir, g)
 
                     with open(run_log_text_path, "a") as log_file:
                         log_file.write('\n... (d) initialize variables')
@@ -595,12 +594,13 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                             # look back at what was run as a sanity check.
                             if j % 20 == 0:
                                 with open(run_log_text_path, "a") as log_file:
-                                    log_file.write('\n... (h-a) run accuracy and merged')
-                                acc, summary_res = sess.run([accuracy, merged])
+                                    log_file.write('\n... (h-a) run accuracy ')
+                                #acc, summary_res = sess.run([accuracy, merged])
+                                acc = sess.run(accuracy)
                                 acc_list.append(acc)
-                                with open(run_log_text_path, "a") as log_file:
-                                    log_file.write('\n... (h-b) write to summary')
-                                summary_writer.add_summary(summary_res, sess.run(global_step * (j + 1)))
+                                #with open(run_log_text_path, "a") as log_file:
+                                #    log_file.write('\n... (h-b) write to summary')
+                                #summary_writer.add_summary(summary_res, sess.run(global_step * (j + 1)))
                             else:
                                 with open(run_log_text_path, "a") as log_file:
                                     log_file.write('\n... (h-a) run accuracy')
@@ -617,26 +617,20 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
 
                             with open(run_log_text_path, "a") as log_file:
                                 log_file.write('\n... (i-a) found good accuracy, save the graph')
-
                             # We need to save this thing
                             # According to some link (https://github.com/tensorflow/tensorflow/issues/1962), adding the
                             # 'write_meta_graph=False' seems to fix peoples problems of dying during save.
                             try:
                                 saver.save(sess, test_chk_pt_dir, global_step=global_step, write_meta_graph=False)
                                 best_accuracy = avg_accuracy
-
                             except:
-
                                 print('\nTESTING, problem with saving check-point, not saving the graph')
-
                                 with open(run_log_text_path, "a") as log_file:
                                     log_file.write('\n... (i-a-1) problem with saving check-point, not saving graph')
-
                                 with open(fail_log_test_path, "a") as fail_log:
                                     fail_log.write('\n\nERROR ERROR, oops, failed to save chk-pt try-loop at global-s'
                                                    'tep: ' + str(sess.run(global_step)) + ', at: '
                                                    + str(datetime.now()))
-
                             # Reset best counter. If this number gets too big (bigger 'than drop_count_limit'), then
                             # we will exit testing and training.
                             acc_exit_counter = 0
@@ -655,7 +649,13 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                             # in accuracy
                             if performance_drop_count_limit < acc_exit_counter:
                                 performance_drop_event.set()
-                                # Now we need to break out of the for-loop
+                                # Now we need to break out of the for-loop, but before we do this we need to close out
+                                # of things
+                                # summary_writer.close()
+                                coord.request_stop()
+                                coord.join(threads)
+                                sess.close()
+                                time.sleep(1.0)
                                 break
 
                         with open(run_log_text_path, "a") as log_file:
@@ -683,15 +683,15 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
 
                         coord.request_stop()
                         coord.join(threads)
-                        sess.close()
-                        time.sleep(5)
+                        #sess.close()
+                        time.sleep(2)
 
                         # Lets keep track of starting run in file
                         with open(run_log_text_path, "a") as log_file:
                             log_file.write('\n... (m) sleeping for a bit')
 
                         # Just to make sure things close up okay
-                        time.sleep(2.0)
+                        time.sleep(1.0)
 
                     else:
 
@@ -705,6 +705,10 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                             gen_count += 1
 
                         time.sleep(2.0)
+
+                    # I forgot to add this earlier
+                    #summary_writer.close()
+                    sess.close()
 
                 except:
 
@@ -724,6 +728,7 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                 with open(run_log_text_path, "a") as log_file:
                     log_file.write('\n\nLEAVING TRAINING ... ... ... limit in epochs with no accuracy improvement hit, exited test loop')
                 print("\nTESTING, limit in epochs with no accuracy improvement hit, writing to eval_results.txt \n")
+
             else:
                 with open(run_log_text_path, "a") as log_file:
                     log_file.write('\n\nLEAVING TRAINING ... ... ... training iterations finished, exited test loop')
@@ -788,7 +793,8 @@ if __name__ == "__main__":
     batch_size = 35
     n_epochs = 300
     batch_norm = True
-    regulizer_list = [0.0, 0.001, .01, .1, 1.0]
+    #regulizer_list = [0.0, 0.001, .01, .1, 1.0]
+    regulizer_list = [0.001, .01, .1, 1.0]
     keep_prob_list = [1.0, .9, .8, .7]
     learning_rate = .001
 
@@ -800,9 +806,9 @@ if __name__ == "__main__":
     run_info_text_path = os.path.join(save_path, 'training_testing_.txt')
     with open(run_info_text_path, "a") as info_text_file:
 
-        for regulizer in regulizer_list:
+        for keep_prob in keep_prob_list:
 
-            for keep_prob in keep_prob_list:
+            for regulizer in regulizer_list:
 
                 for i in range(len(train_filenames_list)):
 
