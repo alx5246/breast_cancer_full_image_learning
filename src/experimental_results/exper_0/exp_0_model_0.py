@@ -96,7 +96,7 @@ def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_trai
 
     # No down-sampling in first image please
     layer_1_str = 'first_layer'
-    layer_1_depth = 64
+    layer_1_depth = 32
     layer_1_num_res = 1
     layer_1_down_sample = False
 
@@ -108,9 +108,9 @@ def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_trai
                                            regulizer=regulizer, keep_prob=keep_prob))
 
     # Yes down sampling
-    # Input at this point should be [n, 128, 128, 64]
+    # Input at this point should be [n, 128, 128, 32]
     layer_2_str = 'second_layer'
-    layer_2_depth = 128
+    layer_2_depth = 64
     layer_2_num_res = 1
     layer_2_down_sample = True
 
@@ -129,9 +129,9 @@ def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_trai
                                  keep_prob=keep_prob))
 
     # Yes down sampling
-    # Input at this point should be [n, 64, 64, 128]
+    # Input at this point should be [n, 64, 64, 64]
     layer_3_str = 'third_layer'
-    layer_3_depth = 256
+    layer_3_depth = 128
     layer_3_num_res = 1
     layer_3_down_sample = True
 
@@ -150,9 +150,9 @@ def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_trai
                                  keep_prob=keep_prob))
 
     # Yes down sampling
-    # Input at this point should be [n, 32, 32, 256]
+    # Input at this point should be [n, 32, 32, 128]
     layer_4_str = 'fourth_layer'
-    layer_4_depth = 512
+    layer_4_depth = 256
     layer_4_num_res = 1
     layer_4_down_sample = True
 
@@ -171,9 +171,9 @@ def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_trai
                                  keep_prob=keep_prob))
 
     # Yes down sampling
-    # Input at this point should be [n, 16, 16, 512]
+    # Input at this point should be [n, 16, 16, 256]
     layer_5_str = 'fifth_layer'
-    layer_5_depth = 1024
+    layer_5_depth = 512
     layer_5_num_res = 1
     layer_5_down_sample = True
 
@@ -191,12 +191,27 @@ def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_trai
                                  is_training=is_training, on_cpu=on_cpu, gpu=gpu, regulizer=regulizer,
                                  keep_prob=keep_prob))
 
+    # Yes down sampling
+    # Input at this point should be [n, 8, 8, 512]
+    layer_6_str = 'sixth_layer'
+    layer_6_depth = 1012
+    layer_6_num_res = 1
+    layer_6_down_sample = True
 
-    # Input at this point should be [n, 8, 8, 1024]
-    # apply a max pool operation
-    with tf.variable_scope('sixth_layer_max_pool'):
-        net_layers.append(tf.nn.max_pool(net_layers[-1], ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME',
-                                         name='max_pool_op'))
+    for i in range(layer_6_num_res):
+        var_name = layer_6_str + "_res_%d" % len(net_layers)
+        with tf.variable_scope(var_name):
+            if i == 0:
+                net_layers.append(
+                    nl.res_block(net_layers[-1], layer_6_depth, down_sample=layer_6_down_sample,
+                                 batch_norm=batch_norm,
+                                 is_training=is_training, on_cpu=on_cpu, gpu=gpu, regulizer=regulizer,
+                                 keep_prob=keep_prob))
+            else:
+                net_layers.append(
+                    nl.res_block(net_layers[-1], layer_6_depth, down_sample=False, batch_norm=batch_norm,
+                                 is_training=is_training, on_cpu=on_cpu, gpu=gpu, regulizer=regulizer,
+                                 keep_prob=keep_prob))
 
     # Input at this point should be [n, 4, 4, 1024]
     # apply a max pool operation
