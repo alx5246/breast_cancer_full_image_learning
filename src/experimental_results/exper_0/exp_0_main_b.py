@@ -796,7 +796,8 @@ if __name__ == "__main__":
     batch_norm = True
     #regulizer_list = [0.0, 0.001, .01, .1, 1.0]
     regulizer_list = [0.001, .01, .1, 1.0]
-    keep_prob_list = [1.0, .9, .8, .7]
+    #keep_prob_list = [1.0, .9, .8, .7]
+    keep_prob_list = [ .9, .8, .7]
     learning_rate = .001
 
     number_train_sessions = len(regulizer_list) * len(keep_prob_list) * len(train_filenames_list)

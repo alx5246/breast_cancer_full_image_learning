@@ -691,7 +691,7 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                         coord.request_stop()
                         coord.join(threads)
                         #sess.close()
-                        time.sleep(2)
+                        time.sleep(.5)
 
                     else:
 
@@ -703,7 +703,7 @@ def evaluation_session(is_restart, data_description_txt_file, finished_training_
                             print("\nTESTING, NOT starting evaluation, still same global-step as last test iteration\n")
                             gen_count += 1
 
-                        time.sleep(2.0)
+                        time.sleep(.5)
 
                     # I forgot to add this earlier
                     #summary_writer.close()
@@ -810,8 +810,10 @@ if __name__ == "__main__":
     batch_size = 35
     n_epochs = 300
     batch_norm = True
-    regulizer_list = [0.0, 0.001, .01, .1, 1.0]
-    keep_prob_list = [1.0, .9, .8, .7]
+    #regulizer_list = [0.0, 0.001, .01, .1, 1.0]
+    #keep_prob_list = [1.0, .9, .8, .7]
+    regulizer_list = [0.001, .01, .1, 1.0]
+    keep_prob_list = [.9, .8]
     learning_rate = .001
 
     number_train_sessions = len(regulizer_list) * len(keep_prob_list) * len(train_filenames_list)
@@ -828,100 +830,96 @@ if __name__ == "__main__":
 
             for regulizer in regulizer_list:
 
-                theCount += 1
+                for i in range(len(train_filenames_list)):
 
-                if theCount > 4: # This is only added so we do not repeat the same results as before!
+                    info_text_file.write("\nRunning Training-Testing on data-set "+ str(i) + ", with reg-val: "+ str(regulizer)+ ", with keep_prob:"+ str(keep_prob)+ "\n")
 
-                    for i in range(len(train_filenames_list)):
+                    print("\n\n\n########################################################################################")
+                    print("Beginning training session %d of %d" % (count, number_train_sessions))
+                    print("Total run time is " + str(time.time()-global_start_time))
+                    print("########################################################################################")
 
-                        info_text_file.write("\nRunning Training-Testing on data-set "+ str(i) + ", with reg-val: "+ str(regulizer)+ ", with keep_prob:"+ str(keep_prob)+ "\n")
+                    # Pull out the correct set of training/testing data and the description txt files
+                    train_filenames = train_filenames_list[i]
+                    test_filenames = test_filenames_list[i]
+                    data_description = data_description_list[i]  # The txt files that describe the data
 
-                        print("\n\n\n########################################################################################")
-                        print("Beginning training session %d of %d" % (count, number_train_sessions))
-                        print("Total run time is " + str(time.time()-global_start_time))
-                        print("########################################################################################")
+                    # Create the Multi-Processing events that will handle when the training and the testing threads
+                    # each begin
+                    finished_first_epoch_event = mp.Event()
+                    finished_training_event = mp.Event()
+                    acc_not_improve_event = mp.Event()
 
-                        # Pull out the correct set of training/testing data and the description txt files
-                        train_filenames = train_filenames_list[i]
-                        test_filenames = test_filenames_list[i]
-                        data_description = data_description_list[i]  # The txt files that describe the data
+                    # Pull out the number of training examples
+                    n_examples_per_epoch = train_numbexamples_list[i]
+                    # Start the training process
+                    p1 = mp.Process(target=training_session, args=(False, data_description, finished_first_epoch_event,
+                                                                   finished_training_event, acc_not_improve_event,
+                                                                   save_path, train_filenames, n_examples_per_epoch,
+                                                                   n_classes, batch_size, n_epochs, batch_norm,
+                                                                   regulizer, keep_prob, learning_rate))
+                    p1.start()
+                    # Wait until the Multi-Processing event is set, this occurs only after the first training iteration
+                    # is complete, and is necessary so that the testing evaluation actually has something to load!
+                    finished_first_epoch_event.wait()
 
-                        # Create the Multi-Processing events that will handle when the training and the testing threads
-                        # each begin
-                        finished_first_epoch_event = mp.Event()
-                        finished_training_event = mp.Event()
-                        acc_not_improve_event = mp.Event()
+                    # Pull out the number of testing examples
+                    n_examples_per_epoch = test_numbexamples_list[i]
+                    # Start the testing
+                    p2 = mp.Process(target=evaluation_session, args=(False, data_description, finished_training_event,
+                                                                     acc_not_improve_event, 20, save_path,
+                                                                     test_filenames,
+                                                                     n_examples_per_epoch, n_classes, batch_size, n_epochs,
+                                                                     batch_norm,
+                                                                     regulizer, keep_prob, learning_rate))
+                    p2.start()
 
-                        # Pull out the number of training examples
-                        n_examples_per_epoch = train_numbexamples_list[i]
-                        # Start the training process
-                        p1 = mp.Process(target=training_session, args=(False, data_description, finished_first_epoch_event,
-                                                                       finished_training_event, acc_not_improve_event,
-                                                                       save_path, train_filenames, n_examples_per_epoch,
-                                                                       n_classes, batch_size, n_epochs, batch_norm,
-                                                                       regulizer, keep_prob, learning_rate))
-                        p1.start()
-                        # Wait until the Multi-Processing event is set, this occurs only after the first training iteration
-                        # is complete, and is necessary so that the testing evaluation actually has something to load!
-                        finished_first_epoch_event.wait()
+                    # Now according to http://stackoverflow.com/questions/22125256/python-multiprocessing-watch-a-proces
+                    # s-and-restart-it-when-fails, I can set something up to check if threads are dying!
+                    while not finished_training_event.is_set() and not acc_not_improve_event.is_set():
+                        # First check the training process!
+                        time.sleep(15)
+                        #print("")
+                        #print("P1, Exit-code: " + str(p1.exitcode))
+                        #print("P1, is-alive? " + str(p1.is_alive()))
+                        #print("P1, finished training? " + str(finished_training_event.is_set()))
+                        #print("")
+                        if not finished_training_event.is_set() and not acc_not_improve_event.is_set() and not p1.is_alive():
+                            # Do error handling and restart the damn thing!
+                            n_examples_per_epoch = train_numbexamples_list[i] # Make sure to get correct number of
+                            p1 = mp.Process(target=training_session,
+                                            args=(True, data_description, finished_first_epoch_event,
+                                                  finished_training_event, acc_not_improve_event,
+                                                  save_path, train_filenames, n_examples_per_epoch,
+                                                  n_classes, batch_size, n_epochs, batch_norm,
+                                                  regulizer, keep_prob, learning_rate))
+                            p1.start()
 
-                        # Pull out the number of testing examples
-                        n_examples_per_epoch = test_numbexamples_list[i]
-                        # Start the testing
-                        p2 = mp.Process(target=evaluation_session, args=(False, data_description, finished_training_event,
-                                                                         acc_not_improve_event, 20, save_path,
-                                                                         test_filenames,
-                                                                         n_examples_per_epoch, n_classes, batch_size, n_epochs,
-                                                                         batch_norm,
-                                                                         regulizer, keep_prob, learning_rate))
-                        p2.start()
+                        # Second look at the other evaluation process
+                        #print("")
+                        #print("P2, Exit-code: " + str(p2.exitcode))
+                        #print("P2, is-alive? " + str(p2.is_alive()))
+                        #print("P2, not improving? " + str(acc_not_improve_event.is_set()))
+                        #print("")
+                        if not finished_training_event.is_set() and not acc_not_improve_event.is_set() and not p2.is_alive():
+                            n_examples_per_epoch = test_numbexamples_list[i]
+                            # Start the testing
+                            p2 = mp.Process(target=evaluation_session, args=(True, data_description, finished_training_event,
+                                                                             acc_not_improve_event, 20, save_path,
+                                                                             test_filenames,
+                                                                             n_examples_per_epoch, n_classes,
+                                                                             batch_size, n_epochs,
+                                                                             batch_norm,
+                                                                             regulizer, keep_prob, learning_rate))
+                            p2.start()
 
-                        # Now according to http://stackoverflow.com/questions/22125256/python-multiprocessing-watch-a-proces
-                        # s-and-restart-it-when-fails, I can set something up to check if threads are dying!
-                        while not finished_training_event.is_set() and not acc_not_improve_event.is_set():
-                            # First check the training process!
-                            time.sleep(15)
-                            #print("")
-                            #print("P1, Exit-code: " + str(p1.exitcode))
-                            #print("P1, is-alive? " + str(p1.is_alive()))
-                            #print("P1, finished training? " + str(finished_training_event.is_set()))
-                            #print("")
-                            if not finished_training_event.is_set() and not acc_not_improve_event.is_set() and not p1.is_alive():
-                                # Do error handling and restart the damn thing!
-                                n_examples_per_epoch = train_numbexamples_list[i] # Make sure to get correct number of
-                                p1 = mp.Process(target=training_session,
-                                                args=(True, data_description, finished_first_epoch_event,
-                                                      finished_training_event, acc_not_improve_event,
-                                                      save_path, train_filenames, n_examples_per_epoch,
-                                                      n_classes, batch_size, n_epochs, batch_norm,
-                                                      regulizer, keep_prob, learning_rate))
-                                p1.start()
+                    # Wait until training is finished.
+                    finished_training_event.wait()
 
-                            # Second look at the other evaluation process
-                            #print("")
-                            #print("P2, Exit-code: " + str(p2.exitcode))
-                            #print("P2, is-alive? " + str(p2.is_alive()))
-                            #print("P2, not improving? " + str(acc_not_improve_event.is_set()))
-                            #print("")
-                            if not finished_training_event.is_set() and not acc_not_improve_event.is_set() and not p2.is_alive():
-                                n_examples_per_epoch = test_numbexamples_list[i]
-                                # Start the testing
-                                p2 = mp.Process(target=evaluation_session, args=(True, data_description, finished_training_event,
-                                                                                 acc_not_improve_event, 20, save_path,
-                                                                                 test_filenames,
-                                                                                 n_examples_per_epoch, n_classes,
-                                                                                 batch_size, n_epochs,
-                                                                                 batch_norm,
-                                                                                 regulizer, keep_prob, learning_rate))
-                                p2.start()
+                    count += 1
 
-                        # Wait until training is finished.
-                        finished_training_event.wait()
-
-                        count += 1
-
-                        p1.join()
-                        p2.join()
+                    p1.join()
+                    p2.join()
 
 
 
