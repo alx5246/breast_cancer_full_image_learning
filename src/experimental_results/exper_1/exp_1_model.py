@@ -4,72 +4,6 @@
 # DESCRIPTION
 # Here we generate a full model of the network we want to use.
 #
-# MODEL-00 Properties. (18-layer Model)
-#
-#  Input-Image (128x128)
-#           |
-#           V
-#     {[3X3, 64]
-#      [3X3, 64]} x2
-#           |
-#           V
-#  size: [n, 128, 128, 64]
-#           |
-#           V
-#     Max-Pool [2,2]
-#           |
-#           V
-#     {[3X3, 128]
-#      [3X3, 128]} x2
-#           |
-#           V
-#  size: [n, 64, 64, 128]
-#           |
-#           V
-#     Max-Pool [2,2]
-#           |
-#           V
-#     {[3X3, 256]
-#      [3X3, 256]} x2
-#           |
-#           V
-#  size: [n, 32, 32, 256]
-#           |
-#           V
-#     Max-Pool [2,2]
-#           |
-#           V
-#     {[3X3, 512]
-#      [3X3, 512]} x2
-#           |
-#           V
-#  size: [n, 16, 16, 512]
-#           |
-#           V
-#     Max-Pool [2,2]
-#           |
-#           V
-#     {[3X3, 1064]
-#      [3X3, 1064]} x2
-#           |
-#           V
-#  size: [n, 8, 8, 1064]
-#           |
-#           V
-#     Max-Pool [2,2]
-#           |
-#           V
-#  size: [n, 4, 4, 1064]
-#           |
-#           V
-#     Avg-Pool [2,2]
-#           |
-#           V
-#  size: [n, 1, 1, 1064]
-#           |
-#           V
-# fc-layer-2128 (hidden layer-ReLu?)
-#
 
 import tensorflow as tf
 import experimental_results.exper_0.exp_0_network_layers as nl
@@ -238,11 +172,11 @@ def loss(prediction, labels):
     :param labels:
     :return: loss
     """
-    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=labels, name='cross_entropy')
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(prediction, labels, name='cross_entropy')
     cross_entropy_mean = tf.reduce_mean(cross_entropy, name='mean_cross_entropy_loss')
 
     # We do it this way because this is how it was done in multi-gpu CIFAR-10 example, which allows us to easily add
     # other values to the loss as well!
-    tf.add_to_collection("losses", cross_entropy_mean)
+    #tf.add_to_collection("losses", cross_entropy_mean)
 
-    #return cross_entropy_mean
+    return cross_entropy_mean

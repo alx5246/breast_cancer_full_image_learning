@@ -53,15 +53,17 @@ def read_and_decode_TFR(filename_queue, image_width, image_height, image_channel
                 image = tf.cast(image, tf.float32, name='cast_image') * (1. / 255.) - 0.5  # Convert to better input range.
                 # IF I want to print this image out later with imshow, I need to dump the last dimension!
                 #image = tf.reshape(image, [height, width]) # I need to get rid of the last dimension
+                image = tf.cast(image, tf.float32)
         else:
             with tf.name_scope('normalize_im'):
                 image = tf.cast(image, tf.float32, name='cast_image') * (1. / 255.) - 0.5  # Convert to better input range.
+                image = tf.cast(image, tf.float32)
 
     with tf.name_scope('format_label'):
         # Convert label from a scalar uint8 tensor to an int32 scalar.
         label = tf.cast(features['image/class/label'], tf.int32, name='cast_label')
         # We make this scalar label a one-hot type!
-        label = tf.one_hot(label, depth=7, name='label_scaler_to_vec')
+        label = tf.one_hot(label, depth=7, name='label_scaler_to_vec', dtype=tf.float32)
         # Flatten label to 1D, rather than 2D with 1-row
         label = tf.reshape(label, [-1], name='label_flatten')
 
@@ -100,14 +102,14 @@ def input_pipline(file_names, batch_size, numb_pre_threads, num_epochs = 1, outp
             # must be larger than "min_after_dequeue" and the amount larger determines the maximm we will prefetch. The
             # recommendation: for capacity is min_after_dequeue + (num_threads + saftey factor) * batch_size
             # From cifar10_input.input(), setup min numb of examples in the queue
-            min_fraction_of_examples_in_queue = 1.0
+            min_fraction_of_examples_in_queue = 10.0
             min_queue_examples = int(batch_size * min_fraction_of_examples_in_queue)
             min_after_dequeue = min_queue_examples
             capacity = min_queue_examples + 5 * batch_size
-            print("\nInput-pipe,")
+            print("\nGenerating Input-pipe,")
             print("  capacity .....", capacity)
             print("  batch_size ...", batch_size)
-            print("  min_after.....", min_after_dequeue)
+            print("  min_after.....", min_after_dequeue, "\n")
 
             if output_type == 'train':
                 # If I want to shuffle input!

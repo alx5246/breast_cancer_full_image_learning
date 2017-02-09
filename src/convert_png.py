@@ -335,26 +335,30 @@ if __name__ == '__main__':
 
     # This is tell how many threads to use and directoreis to work in. Some of this code is hardcoded.
     NUM_THREADS = 1
-    #OUTPUT_DIRECTOY = 'data_files/tfr_files/cancer_data_orig/test'
-    #OUTPUT_DIRECTOY = 'data_files/tfr_files/cancer_data_orig/train'
-    OUTPUT_DIRECTOY = 'data_files/tfr_files/augmented_sets/set_01/train'
+
+    # Where to write files to
+    #OUTPUT_DIRECTOY = 'data_files/tfr_files/augmented_sets/set_01/train'
+    #OUTPUT_DIRECTOY = 'data_files/tfr_files/augmented_sets/set_01/test'
+    #OUTPUT_DIRECTOY = 'data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/train'
+    OUTPUT_DIRECTOY = 'data_files/tfr_files/altered_sets/cancer_data_altered_1_128x128/test'
 
     # Give the data directories
-    #data_dir = 'data_files/png_files/cancer_data_orig/Test'
-    #data_dir = 'data_files/png_files/cancer_data_orig/Training'
-    data_dir = 'data_files/png_files/augmented_sets/set_01/train'
+    #data_dir = 'data_files/png_files/augmented_sets/set_01/train'
+    #data_dir = 'data_files/png_files/augmented_sets/set_01/test'
+    #data_dir = 'data_files/png_files/altered_sets/cancer_data_altered_1_128x128/train'
+    data_dir = 'data_files/png_files/altered_sets/cancer_data_altered_1_128x128/test'
+
 
     # Give label text files, these are the folder labels we will be looking for!
-    #labels_file = 'data_files/png_files/cancer_data_orig/Test/classes.txt'
-    labels_file = 'data_files/png_files/augmented_sets/set_01/train/classes.txt'
-    #              'data_files/png_files/altered_sets/cancer_data_altered_1_128x128/test/classes.txt
+    #labels_file = 'data_files/png_files/augmented_sets/set_01/train/classes.txt'
+    #labels_file = 'data_files/png_files/augmented_sets/set_01/test/classes.txt'
+    #labels_file = 'data_files/png_files/altered_sets/cancer_data_altered_1_128x128/train/classes.txt'
+    labels_file = 'data_files/png_files/altered_sets/cancer_data_altered_1_128x128/test/classes.txt'
 
     # Give name to data
-    name = 'train_data_'
+    name = 'test_data_'
 
     filenames, texts, labels = _find_image_files(data_dir, labels_file)
-    #print(filenames)
-    #name = 'train_data_'
     print("\n..The lebels found are ", set(labels))
     print("..The text-labels are ", set(texts))
     print("\n")
