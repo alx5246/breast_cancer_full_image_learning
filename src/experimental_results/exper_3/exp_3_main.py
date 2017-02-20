@@ -51,7 +51,7 @@ def training_session(is_restart, data_description_txt_file, finished_first_epoch
 
     # For some fucking reason, I need to have this line in my code??? It fails if I do not for... whatever reason
     from tensorflow.python.client import device_lib
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     # To see what devices are available
     print(device_lib.list_local_devices())
 
@@ -810,9 +810,9 @@ if __name__ == "__main__":
     batch_norm = True
     regulizer_list = [0.0, 0.001, .01, .1, 1.0]
     keep_prob_list = [1.0] # Drop out does not seem to be effective here
-    decay_rate_list = [.9]
-    decay_steps_list = [25, 50, 100, 200]
-    learning_rate = .1 # This is now the initial rate
+    decay_rate_list = [.2]
+    decay_steps_list = [10, 20, 40, 80]
+    learning_rate = 0.01 # This is now the initial rate
 
     number_train_sessions = len(regulizer_list) * len(keep_prob_list) * len(train_filenames_list) * len(decay_steps_list)
     count = 1

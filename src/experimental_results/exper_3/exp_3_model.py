@@ -114,7 +114,15 @@ def loss(prediction, labels):
     """
 
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=prediction, name='cross_entropy')
+
+    with tf.device('/cpu:0'):
+        tf.summary.scalar('cross_entropy_min', tf.reduce_min(cross_entropy))
+        tf.summary.scalar('cross_entropy_max', tf.reduce_max(cross_entropy))
+
     cross_entropy_mean = tf.reduce_mean(cross_entropy, name='mean_cross_entropy_loss')
+
+    with tf.device('/cpu:0'):
+        tf.summary.scalar('cross_entropy_mean', cross_entropy_mean)
 
     # We do it this way because this is how it was done in multi-gpu CIFAR-10 example, which allows us to easily add
     # other values to the loss as well!

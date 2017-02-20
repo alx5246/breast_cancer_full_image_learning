@@ -306,7 +306,7 @@ def res_block(input_tensor, output_depth, down_sample=True, batch_norm=True, is_
 
         # No apply the addition operator to combine input and output!
 
-        # First we have to pad the if necessary
+        # First we have to pad the if necessary, it might be better not to pad but instead to replicate!
         if input_depth != output_depth:
             with tf.name_scope('pad_input_tensor'):
                 input_tensor = tf.pad(input_tensor, [[0, 0], [0, 0], [0, 0], [0, output_depth-input_depth]],
