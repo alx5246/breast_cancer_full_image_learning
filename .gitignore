@@ -13,3 +13,22 @@ gen
 .idea
 
 .gitignore
+
+# Make sure we do not keep any of the data on the git
+src/data_files
+src/data_files/*
+src/data_files/*/*
+src/data_files/*/*/*
+src/data_files/*/*/*/*
+src/data_files/*/*/*/*/*
+src/data_files/*/*/*/*/*/*
+src/data_files/*/*/*/*/*/*/*
+src/data_files/*/*/*/*/*/*/*/*
+src/data_files/*/*/*/*/*/*/*/*/*
+
+src/experimental_results/exper_1/saved_results/*
+src/experimental_results/exper_1/saved_results/*/*
+src/experimental_results/exper_1/saved_results/*/*/*
+src/experimental_results/exper_1/saved_results_a/*
+src/experimental_results/exper_1/saved_results_a/*/*
+src/experimental_results/exper_1/saved_results_a/*/*/*

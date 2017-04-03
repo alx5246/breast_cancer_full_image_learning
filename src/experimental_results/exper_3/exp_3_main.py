@@ -11,8 +11,12 @@ import multiprocessing as mp
 
 # Tensorflow import
 import tensorflow as tf
-import experimental_results.exper_3.exp_3_model as model
-import input_pipeline as ip
+import exp_3_model as model
+
+import sys
+print(sys.path)
+
+import src.input_pipeline as ip
 
 from tensorflow.python.client import timeline
 

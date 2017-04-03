@@ -6,7 +6,7 @@
 
 
 import tensorflow as tf
-import experimental_results.exper_3.exp_3_network_layers as nl
+import exp_3_network_layers as nl
 
 
 def generate_res_network(images, batch_size, n_classes, batch_norm=True, is_training=True, on_cpu=False, gpu=0,
